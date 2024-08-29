@@ -1,0 +1,47 @@
+<?php
+session_start();
+require 'config.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$followee_id = isset($_POST['followee_id']) ? $_POST['followee_id'] : '';
+
+if (!$followee_id) {
+    echo "No user specified.";
+    exit();
+}
+
+
+$stmt = $conn->prepare("SELECT * FROM follows WHERE follower_id = ? AND followee_id = ?");
+$stmt->bind_param("ii", $user_id, $followee_id);
+$stmt->execute();
+$already_following = $stmt->fetch();
+$stmt->close();
+
+if (!$already_following) {
+
+    $stmt = $conn->prepare("INSERT INTO follows (follower_id, followee_id) VALUES (?, ?)");
+    $stmt->bind_param("ii", $user_id, $followee_id);
+    $stmt->execute();
+    $stmt->close();
+}
+
+
+header("Location: profile.php?username=" . urlencode(get_username_by_id($followee_id)));
+exit();
+
+function get_username_by_id($id) {
+    global $conn;
+    $stmt = $conn->prepare("SELECT username FROM users WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->bind_result($username);
+    $stmt->fetch();
+    $stmt->close();
+    return $username;
+}
+?>
